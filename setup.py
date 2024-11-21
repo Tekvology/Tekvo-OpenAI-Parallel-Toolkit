@@ -1,18 +1,18 @@
 from setuptools import find_packages, setup
 
 setup(
-        name='openai_parallel_toolkit',
-        version='1.1.2',
-        author='Jellow',
-        author_email='dvdx@foxmail.com',
-        description='OpenAI-Parallel-Toolkit is a Python library for handling multiple OpenAI API keys and parallel '
+        name='tekvo-openai_parallel_toolkit',
+        version='1.0.0',
+        author='Elvin',
+        author_email='inquiry@tekvo.io',
+        description='Tekvo OpenAI-Parallel-Toolkit is a Python library for handling multiple OpenAI API keys and parallel '
                     'tasks.'
                     ' It provides API key rotation, multithreading for faster task execution, '
                     'and utility functions to boost your OpenAI integration. '
                     'Ideal for efficient large-scale OpenAI usage.',
         long_description=open('README.md').read(),
         long_description_content_type="text/markdown",
-        url='https://github.com/CZT0/OpenAI-Parallel-Toolkit',
+        url='https://github.com/Tekvology/Tekvo-OpenAI-Parallel-Toolkit',
         packages=find_packages(),  # Automatically find all packages
         classifiers=[  # Optional
             'Development Status :: 3 - Alpha',

@@ -1,4 +1,6 @@
-# OpenAI Parallel Toolkit
+# Tekvo OpenAI Parallel Toolkit
+
+Base code forked from https://github.com/CZT0/OpenAI-Parallel-Toolkit/ on 21/Nov/2024
 
 **English** | [中文](README.md)
 
