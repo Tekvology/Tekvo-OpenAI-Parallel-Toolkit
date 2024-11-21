@@ -1,106 +1,105 @@
-# OpenAI 并行工具箱
+# OpenAI Parallel Toolkit
 
-**中文** | [English](README_EN.md)
+**English** | [中文](README.md)
 
-这个项目利用 OpenAI 5美元账户的密钥，通过购买大量5美元密钥并结合密钥管理与多线程并行处理大量数据，绕过了5美元账户每分钟只能请求3次的限制。
+This project utilizes the keys of OpenAI's $5 accounts by purchasing a large number of $5 keys and combining key management with multithreading to process large amounts of data in parallel, bypassing the limitation of only 3 requests per minute for each $5 account.
 
-并行处理的速度为 key的数目/20，即20个key的速度为1 it/s，40个key的速度为2 it/s，以此类推。注意每个账号每天只能请求200次。
+The processing speed scales with the number of keys, with 20 keys achieving a speed of 1 it/s, 40 keys achieving 2 it/s, and so forth. Note that each account is limited to 200 requests per day.
 
-默认模型使用的是`gpt-3.5-turbo-0613`，如果你的上下文过长，可以在运行完成一遍后使用[自定义模型](#自定义模型与传递模型参数)，指定`gpt-3.5-turbo-16k-0613`再次运行，会将无法处理的数据继续处理。
+The default model used is `gpt-3.5-turbo-0613`. If your context is too long, after running once, you can use [custom models](#custom-models-and-passing-model-parameters) and specify `gpt-3.5-turbo-16k-0613` to reprocess data that couldn't be handled initially.
 
-## 更简易的框架
-如果你想使用一个更简易的key管理框架，可以查看我的另一个开源项目[StableOpenAI](https://github.com/CZT0/StableOpenAI)，这个项目利用指数退避算法和读写锁，简洁高效的实现了线程安全的Key管理。
+## Simplified Framework
+If you are looking for a simpler key management framework, check out my other open-source project [StableOpenAI](https://github.com/CZT0/StableOpenAI). This project uses an exponential backoff algorithm and read-write locks to implement thread-safe Key management efficiently and succinctly.
 
-## 功能
+## Features
 
-1. ✅ 在使用量达到限制时，自动轮换 OpenAI API 密钥，内置错误处理和自动重试机制。
-2. ✅ 提供在中国代理访问 OpenAI 服务的解决方案。
-3. ✅ 支持 API 和文件操作的并行处理，优化吞吐量和效率，支持断点续传。
+1. ✅ Automatically rotates OpenAI API keys when usage limits are reached, with built-in error handling and automatic retry mechanisms.
+2. ✅ Provides a solution for accessing OpenAI services via proxy in China.
+3. ✅ Supports parallel processing of API and file operations, optimizing throughput and efficiency, with support for resuming from breakpoints.
 
-## 安装
+## Installation
 
 ```bash
 pip install openai-parallel-toolkit
 ```
 
-## 使用方法
+## Usage
 
-目前提供三种使用方法：
+There are currently three ways to use this:
 
-1. 对一个数据集进行并行处理，支持中断后继续运行。
-2. 在代码中同时处理多个数据。
-3. 在代码中处理单个数据。
+1. Process a dataset in parallel, supporting resumption after interruption.
+2. Handle multiple data points simultaneously in code.
+3. Handle a single data point in code.
 
-### 1. 处理数据集
+### 1. Processing a Dataset
 
-#### 数据集格式
+#### Dataset Format
 
-数据的输入和输出都采用 jsonl 格式。
+Both input and output data use the jsonl format.
 
-输入文件 `input.jsonl` 格式例子，注意index为字符串：
+Input file `input.jsonl` example, note that the index is a string:
 
 ```json lines
-{"index": "0", "instruction": "把这句话翻译成英文", "input": "今天天气真好"}
-{"index": "1", "instruction": "写一句话", "input": ""}
-{"index": "2", "instruction": "把这句话翻译成英文", "input": "你多大了"}
-{"index": "3", "instruction": "写一个笑话", "input": ""}
+{"index": "0", "instruction": "Translate this sentence into English", "input": "今天天气真好"}
+{"index": "1", "instruction": "Write a sentence", "input": ""}
+{"index": "2", "instruction": "Translate this sentence into English", "input": "你多大了"}
+{"index": "3", "instruction": "Write a joke", "input": ""}
 ```
 
-输出文件 `output.jsonl` 格式例子：
+Output file `output.jsonl` example:
 
 ```json lines
 {"0": "The weather is really nice today."}
-{"1": "我正在尽力思考如何回答你的问题。"}
+{"1": "I am trying my best to think of how to answer your question."}
 {"2": "How old are you?"}
-{"3": "为什么小明总是躲在树后笑？\n\n因为他是一个木头人！"}
+{"3": "Why does Xiaoming always laugh behind the tree?\n\nBecause he's a wooden man!"}
 ```
-注意，如果遇到问题，比如上下文过长或者网络问题，数据会以下面的格式标记，重新运行会再次尝试处理这些数据。
+Note, if there are issues, like overly long context or network problems, the data will be marked in the following format, and reprocessing will be attempted upon rerunning.
 ```json lines
 {"4":null}
 ```
-合并文件
+Merging Files
 
-可以将input.jsonl与output.jsonl合并成一个json文件，便于进行LLM训练
+You can merge `input.jsonl` with `output.jsonl` into a single JSON file, which is convenient for LLM training.
 ```json
 [
     {
         "index": "0",
-        "instruction": "把这句话翻译成英文",
+        "instruction": "Translate this sentence into English",
         "input": "今天天气真好",
         "output": "The weather is really nice today."
     },
     {
         "index": "1",
-        "instruction": "写一句话",
+        "instruction": "Write a sentence",
         "input": "",
-        "output": "请给我一杯咖啡。"
+        "output": "Please give me a cup of coffee."
     },
     {
         "index": "2",
-        "instruction": "把这句话翻译成英文",
+        "instruction": "Translate this sentence into English",
         "input": "你多大了",
         "output": "How old are you?"
     },
     {
         "index": "3",
-        "instruction": "写一个笑话",
+        "instruction": "Write a joke",
         "input": "",
-        "output": "为什么小明每次笑都能感受到疼痛呢？\n\n因为他笑起来总是把肚子笑疼了！"
+        "output": "Why does Xiaoming always feel pain when he laughs?\n\nBecause his laughter always hurts his stomach!"
     }
 ]
 ```
-调用方式：
+Invocation method:
 ```python
 from openai_parallel_toolkit import ParallelToolkit
 
 if __name__ == '__main__':
     tool = ParallelToolkit(config_path="config.json",
                            input_path="data.jsonl",
-                           output_path="output.jsonl") # 配置ParallelToolkit
-    tool.run() # 开始调用API，结果会写入到output_path
-    tool.merge("merged.json") # 将结果与输入合并到同一个文件
+                           output_path="output.jsonl")
+    tool.merge("merged.json")
 ```
-#### 处理数据集：
+#### Processing the Dataset:
 
 ```python
 from openai_parallel_toolkit import ParallelToolkit
@@ -110,34 +109,25 @@ if __name__ == '__main__':
                            input_path="data.jsonl",
                            output_path="output.jsonl")
     tool.run()
-    # 如果你想要合并文件，可以在处理完成后调用
+    # If you want to merge files, you can call
+
+ this after processing
     # tool.merge("merged.json")
 ```
 
-`ParallelToolkit` 参数：
+`ParallelToolkit` Parameters:
 
-- `config_path`: 配置文件路径。
-- `input_path`: 输入文件路径。
-- `output_path`: 输出文件路径。
-- `max_retries`: 最大重试次数，默认为5。
-- `threads`: 线程数，默认为20，最后的线程数会取 key 数目的一半和数据集数目的最小值。
-- `name`: 进度条名称，默认为"ParallelToolkit Progress"。
-- `openai_model`: 默认为 gpt-3.5-turbo-0613，注意 5 美元账号无法使用 gpt-4。
+- `config_path`: Configuration file path.
+- `input_path`: Input file path.
+- `output_path`: Output file path.
+- `max_retries`: Maximum number of retries, default is 5.
+- `threads`: Number of threads, default is 20. The final number of threads will be the minimum of half the number of keys and the dataset size.
+- `name`: Progress bar name, default is "ParallelToolkit Progress".
+- `openai_model`: Default is gpt-3.5-turbo-0613. Note that the $5 account cannot use gpt-4.
 
-如果想使用其他模型，例如'gpt-4o-mini', 可以这样做：
+### 2. Handling Multiple Data Points Simultaneously
 
-```
-model = OpenAIModel("gpt-4o-mini", temperature=0.1)
-tool = ParallelToolkit(config_path="config.json",
-                           input_path="data.jsonl",
-                           output_path="output.jsonl",
-                           openai_model=model,
-        )
-```
-
-### 2. 同时处理多个数据
-
-使用 `Prompt` 命名元组构造一个 `Dict`，然后传入 `parallel_api` 方法中。
+Construct a `Dict` using the `Prompt` namedtuple, then pass it to the `parallel_api` method.
 
 ```python
 from openai_parallel_toolkit import ParallelToolkit, Prompt
@@ -149,7 +139,7 @@ if __name__ == '__main__':
     print(ans)
 ```
 
-### 3. 处理单个数据
+### 3. Handling a Single Data Point
 
 ```python
 from openai_parallel_toolkit import ParallelToolkit, Prompt
@@ -162,36 +152,30 @@ if __name__ == '__main__':
 
 ## `config.json`
 
-`config.json`
-文件包含了 [OpenAI API 密钥 ↗](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)
-和 `api_base`。
+The `config.json` file contains your [OpenAI API Keys ↗](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key) and `api_base`.
 
-你可以按照以下方式创建 `config.json` 文件：
+You can create a `config.json` file as follows:
 
 ```json
 {
   "api_keys": [
-    "你的api密钥1",
-    "你的api密钥2",
-    "你的api密钥3"
+    "your api key 1",
+    "your api key 2",
+    "your api key 3"
   ],
-  "api_base": "你的api_base"
+  "api_base": "your api_base"
 }
 ```
 
-在这段 JSON 中，`api_keys` 是一个数组，包含了你的 OpenAI API
-密钥。请将 `"你的api密钥1"`, `"你的api密钥2"`, `"你的api密钥3"` 替换为你的实际 API 密钥。如果你只有一个 API
-密钥，那么该数组中只需要包含一个元素。
+In this JSON, `api_keys` is an array containing your OpenAI API keys. Replace `"your api key 1"`, `"your api key 2"`, `"your api key 3"` with your actual API keys. If you have only one API key, then this array should contain only one element.
 
-`"api_base"` 是你用来发送 API 请求的基本 URL。对于 OpenAI，它应该设置为 `"https://api.openai.com/v1"`。
+`"api_base"` is the base URL you use for sending API requests. For OpenAI, it should be set to `"https://api.openai.com/v1"`.
 
-请注意，你的 API 密钥非常重要，应当妥善保管，避免泄露给其他人。你可以查看 OpenAI
-的 [API Key Safety Best Practices ↗](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key)
-获取更多信息。
+Please note that your API key is very important and should be kept secure to prevent it from being disclosed to others. You can read more about [API Key Safety Best Practices ↗](https://help.openai.com/en/articles/4936850-where-do-i-find-my-secret-api-key) provided by OpenAI.
 
-## 自定义模型与传递模型参数
+## Custom Models and Passing Model Parameters
 
-如果你想自定义使用的模型和参数，可以在 `ParallelToolkit` 初始化时传入。
+If you want to customize the model and parameters used, you can pass them during the initialization of `ParallelToolkit`.
 
 ```python
 from openai_parallel_toolkit import ParallelToolkit, Prompt, OpenAIModel
@@ -203,15 +187,14 @@ if __name__ == '__main__':
     print(ans)
 ```
 
-## 中国访问 OpenAI 服务代理
+## Proxy for Accessing OpenAI Services in China
 
-如果你在运行程序时发现进度条没有显示任何进度，可能是由于网络连接问题，特别是在中国或其他访问 OpenAI 服务困难的地区。
+If you find that the progress bar does not show any progress when running the program, it may be due to network connection issues, especially in China or other regions where accessing OpenAI services is difficult.
 
-为了解决这个问题，你可以部署自己的代理服务并在 `api_base` 中指定代理服务的
-URL。你可以参考 [OpenAI Proxy ↗](https://github.com/justjavac/openai-proxy) 项目获取更多信息。
+To resolve this issue, you can deploy your own proxy service and specify the URL of the proxy service in `api_base`. You can refer to the [OpenAI Proxy ↗](https://github.com/justjavac/openai-proxy) project for more information.
 
-该项目介绍了如何使用 Cloudflare 作为代理，免费提供高达 100,000 次/天的 API 请求。这可以有效地解决网络连接问题，并确保你的程序可以顺畅运行。
+This project describes how to use Cloudflare as a proxy, providing up to 100,000 API requests/day for free. This can effectively solve network connection problems and ensure your program runs smoothly.
 
-请记住，需要将上述链接替换为你自己的实际 URL。
+Remember to replace the above link with your actual URL.
 
-如果你不需要指定 `api_base`，可以在 `config.json` 文件中将其留空。
+If you do not need to specify `api_base`, you can leave it empty in the `config.json` file.
